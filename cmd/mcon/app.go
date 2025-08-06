@@ -33,28 +33,23 @@ func receive(receiver chan string) tea.Cmd {
 	}
 }
 
-func initialModel(limit int, fifo string, receiver chan string) Model {
-	prompt := textinput.New()
-	prompt.Prompt = ""
-	prompt.Focus()
+func initialModel(limit int, fifo string, receiver chan string) (Model, error) {
+	var m Model
 
-	var stdin io.Writer
-	var err error
+	m.limit = limit
+	m.receiver = receiver
+	m.prompt = textinput.New()
+	m.prompt.Prompt = ""
+	m.prompt.Focus()
 
 	if fifo != "" {
-		stdin, err = os.OpenFile(fifo, os.O_WRONLY, 0644)
-		if err != nil {
-			panic(err)
+		var err error
+		if m.stdin, err = os.OpenFile(fifo, os.O_WRONLY, 0644); err != nil {
+			return m, err
 		}
 	}
 
-	return Model{
-		buffer:   nil,
-		limit:    limit,
-		receiver: receiver,
-		prompt:   prompt,
-		stdin:    stdin,
-	}
+	return m, nil
 }
 
 func (m Model) Init() tea.Cmd {
