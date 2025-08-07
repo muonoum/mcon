@@ -47,8 +47,9 @@ func receive(receiver chan string) tea.Cmd {
 
 func initialModel(limit int, cli CLI, receiver chan string) (m Model, err error) {
 	m.cli = cli
-	m.limit = limit
 	m.receiver = receiver
+	m.limit = limit
+
 	m.prompt = textinput.New()
 	m.prompt.Prompt = ""
 	m.prompt.Focus()
@@ -61,9 +62,7 @@ func initialModel(limit int, cli CLI, receiver chan string) (m Model, err error)
 		Background(lipgloss.Color(cli.PromptBackgroundColor))
 
 	if cli.Stdin != "" {
-		if m.stdin, err = os.OpenFile(cli.Stdin, os.O_WRONLY, 0644); err != nil {
-			return m, err
-		}
+		m.stdin, err = os.OpenFile(cli.Stdin, os.O_WRONLY, 0644)
 	}
 
 	return m, nil
