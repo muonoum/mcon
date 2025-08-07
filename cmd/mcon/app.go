@@ -65,7 +65,7 @@ func initialModel(limit int, cli CLI, receiver chan string) (m Model, err error)
 		m.stdin, err = os.OpenFile(cli.Stdin, os.O_WRONLY, 0644)
 	}
 
-	return m, nil
+	return m, err
 }
 
 func (m Model) Init() tea.Cmd {
