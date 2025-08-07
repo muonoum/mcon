@@ -12,7 +12,19 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+type CLI struct {
+	Stdin         string
+	StdoutCommand []string `arg:""`
+
+	StdoutBackgroundColor string `default:""`
+	StdoutTextColor       string `default:"#bcb5b3"`
+	PromptBackgroundColor string `default:"#bcb5b3"`
+	PromptTextColor       string `default:"#2b252b"`
+	CursorColor           string `default:"#6c6563"`
+}
+
 type Model struct {
+	cli         CLI
 	initialised bool
 
 	buffer   []string
@@ -33,18 +45,23 @@ func receive(receiver chan string) tea.Cmd {
 	}
 }
 
-func initialModel(limit int, fifo string, receiver chan string) (Model, error) {
-	var m Model
-
+func initialModel(limit int, cli CLI, receiver chan string) (m Model, err error) {
+	m.cli = cli
 	m.limit = limit
 	m.receiver = receiver
 	m.prompt = textinput.New()
 	m.prompt.Prompt = ""
 	m.prompt.Focus()
+	m.prompt.TextStyle = lipgloss.NewStyle().
+		Background(lipgloss.Color(m.cli.PromptBackgroundColor)).
+		Foreground(lipgloss.Color(m.cli.PromptTextColor))
+	m.prompt.Cursor.Style = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(m.cli.CursorColor))
+	m.prompt.Cursor.TextStyle = lipgloss.NewStyle().
+		Background(lipgloss.Color(cli.PromptBackgroundColor))
 
-	if fifo != "" {
-		var err error
-		if m.stdin, err = os.OpenFile(fifo, os.O_WRONLY, 0644); err != nil {
+	if cli.Stdin != "" {
+		if m.stdin, err = os.OpenFile(cli.Stdin, os.O_WRONLY, 0644); err != nil {
 			return m, err
 		}
 	}
@@ -79,6 +96,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !m.initialised {
 			m.initialised = true
 			m.stdout = viewport.New(msg.Width, height)
+			m.stdout.Style = lipgloss.NewStyle().
+				Background(lipgloss.Color(m.cli.StdoutBackgroundColor)).
+				Foreground(lipgloss.Color(m.cli.StdoutTextColor))
+
 			m.stdout.SetContent(strings.Join(m.buffer, "\n"))
 			m.stdout.GotoBottom()
 		} else {

@@ -5,11 +5,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-type CLI struct {
-	Stdin         string
-	StdoutCommand []string `arg:""`
-}
-
 func main() {
 	var cli CLI
 	ctx := kong.Parse(&cli)
@@ -17,7 +12,7 @@ func main() {
 	stdout, err := streamCommand(cli.StdoutCommand[0], cli.StdoutCommand[1:]...)
 	ctx.FatalIfErrorf(err)
 
-	model, err := initialModel(100, cli.Stdin, stdout)
+	model, err := initialModel(100, cli, stdout)
 	ctx.FatalIfErrorf(err)
 
 	prog := tea.NewProgram(model,
