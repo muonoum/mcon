@@ -14,8 +14,12 @@ import (
 
 type CLI struct {
 	Stdin         string
+	Scrollback    int      `default:"1000"`
 	StdoutCommand []string `arg:""`
+	Theme         Theme    `embed:""`
+}
 
+type Theme struct {
 	StdoutBackgroundColor string `default:""`
 	StdoutTextColor       string `default:"#bcb5b3"`
 	PromptBackgroundColor string `default:"#bcb5b3"`
@@ -24,12 +28,13 @@ type CLI struct {
 }
 
 type Model struct {
-	cli         CLI
 	initialised bool
 
-	buffer   []string
-	limit    int
-	receiver chan string
+	theme Theme
+
+	buffer     []string
+	scrollBack int
+	receiver   chan string
 
 	prompt textinput.Model
 
@@ -45,21 +50,27 @@ func receive(receiver chan string) tea.Cmd {
 	}
 }
 
-func initialModel(limit int, cli CLI, receiver chan string) (m Model, err error) {
-	m.cli = cli
+func initialModel(cli CLI) (m Model, _ error) {
+	receiver, err := stdoutChannel(cli.StdoutCommand[0], cli.StdoutCommand[1:]...)
+	if err != nil {
+		return m, err
+	}
+
+	m.theme = cli.Theme
 	m.receiver = receiver
-	m.limit = limit
+	m.scrollBack = cli.Scrollback
 
 	m.prompt = textinput.New()
 	m.prompt.Prompt = ""
-	m.prompt.Focus()
 	m.prompt.TextStyle = lipgloss.NewStyle().
-		Background(lipgloss.Color(m.cli.PromptBackgroundColor)).
-		Foreground(lipgloss.Color(m.cli.PromptTextColor))
+		Background(lipgloss.Color(m.theme.PromptBackgroundColor)).
+		Foreground(lipgloss.Color(m.theme.PromptTextColor))
 	m.prompt.Cursor.Style = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(m.cli.CursorColor))
+		Foreground(lipgloss.Color(m.theme.CursorColor))
 	m.prompt.Cursor.TextStyle = lipgloss.NewStyle().
-		Background(lipgloss.Color(cli.PromptBackgroundColor))
+		Background(lipgloss.Color(m.theme.PromptBackgroundColor))
+
+	m.prompt.Focus()
 
 	if cli.Stdin != "" {
 		m.stdin, err = os.OpenFile(cli.Stdin, os.O_WRONLY, 0644)
@@ -96,8 +107,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.initialised = true
 			m.stdout = viewport.New(msg.Width, height)
 			m.stdout.Style = lipgloss.NewStyle().
-				Background(lipgloss.Color(m.cli.StdoutBackgroundColor)).
-				Foreground(lipgloss.Color(m.cli.StdoutTextColor))
+				Background(lipgloss.Color(m.theme.StdoutBackgroundColor)).
+				Foreground(lipgloss.Color(m.theme.StdoutTextColor))
 
 			m.stdout.SetContent(strings.Join(m.buffer, "\n"))
 			m.stdout.GotoBottom()
@@ -109,8 +120,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case LogMsg:
 		m.buffer = append(m.buffer, string(msg))
-		if len(m.buffer) > m.limit {
-			m.buffer = m.buffer[len(m.buffer)-m.limit:]
+		if len(m.buffer) > m.scrollBack {
+			m.buffer = m.buffer[len(m.buffer)-m.scrollBack:]
 		}
 
 		m.stdout.SetContent(strings.Join(m.buffer, "\n"))

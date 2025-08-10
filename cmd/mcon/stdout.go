@@ -5,7 +5,7 @@ import (
 	"os/exec"
 )
 
-func streamCommand(arg string, args ...string) (chan string, error) {
+func stdoutChannel(arg string, args ...string) (chan string, error) {
 	cmd := exec.Command(arg, args...)
 
 	stdout, err := cmd.StdoutPipe()
